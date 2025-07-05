@@ -16,6 +16,13 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     restart: on-failure:5
 
+  clouddflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+
   langflow:
     image: langflowai/langflow:latest
     container_name: Langflow
