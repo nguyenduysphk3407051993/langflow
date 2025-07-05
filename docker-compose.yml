@@ -15,20 +15,31 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     restart: on-failure:5
+    networks:
+      - langflow_network # Thêm dịch vụ vào network này
 
   clouddflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    command: tunnel run
+    command: tunnel --no-autoupdate run
     environment:
-      - TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    # Thêm networks cho clouddflared để nó có thể giao tiếp với langflow
+    networks:
+      - langflow_network 
+    # Nếu bạn dùng Cloudflare Tunnel để expose Langflow,
+    # bạn cần cấu hình Cloudflare Tunnel trỏ đến 'http://langflow:7860' <-----Cái này rất quan trọng
+    # trong file config của tunnel hoặc trong dashboard Cloudflare.
+    # clouddflared không cần mở cổng ra bên ngoài.
 
   langflow:
     image: langflowai/langflow:latest
     container_name: Langflow
     user: root
-    ports:
-      - 7860:7860
+    # Bỏ port mapping nếu bạn chỉ muốn truy cập qua Cloudflare Tunnel
+    # hoặc giữ lại nếu bạn muốn truy cập trực tiếp từ host (ví dụ: http://localhost:7860)
+    #ports:
+      #- 7860:7860 
     healthcheck:
       test: timeout 10s bash -c ':> /dev/tcp/127.0.0.1/7860' || exit 1
       interval: 10s
@@ -46,3 +57,10 @@ services:
       LANGFLOW_AUTO_LOGIN: False
     volumes:
       - ./langflow:/var/lib/langflow:rw
+    networks:
+      - langflow_network # Thêm dịch vụ vào network này
+
+# Định nghĩa mạng tùy chỉnh
+networks:
+  langflow_network:
+    driver: bridge # Mặc định là bridge, nhưng bạn có thể chỉ định rõ ràng
